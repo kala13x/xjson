@@ -4,10 +4,12 @@
  *  This source is part of "xjson" project
  *  2019-2021  Sun Dro (f4tb0y@protonmail.com)
  *
- * Project: https://github.com/kala13x/xjson
- * 
  * Implementation of the lexical analyzer and 
  * recursive descent parser with JSON grammar
+ *
+ * The xJson library is free software. you can redistribute it and / or
+ * modify under the terms of The MIT License. See LICENSE file for more
+ * information: https://github.com/kala13x/xjson/blob/master/LICENSE
  */
 
 #include <inttypes.h>
