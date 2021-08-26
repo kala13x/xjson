@@ -10,5 +10,5 @@ files and strings. There is also an example file that implements
 a json file liner and minifier using the xJson library.
 
 The xJson library is free software. you can redistribute it and / or
-modify it under the terms of The MIT License (See LICENSE file for more
+modify under the terms of The MIT License (See LICENSE file for more
 information).
