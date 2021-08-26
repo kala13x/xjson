@@ -34,7 +34,7 @@ typedef struct xjson_args_ {
 void display_usage(const char *pName)
 {
     printf("================================================\n");
-    printf(" Lint and Minify JSON file: v%d.%d (%s)\n",
+    printf(" Lint and Minify JSON file - v%d.%d (%s)\n",
         XJSON_LINT_VER_MAX, XJSON_LINT_VER_MIN, __DATE__);
     printf("================================================\n");
 
