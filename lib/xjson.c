@@ -4,6 +4,8 @@
  *  This source is part of "xjson" project
  *  2019-2021  Sun Dro (f4tb0y@protonmail.com)
  * 
+ * Project: https://github.com/kala13x/xjson
+ * 
  * Implementation of the lexical analyzer and 
  * recursive descent parser with JSON grammar
  */
