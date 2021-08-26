@@ -26,6 +26,107 @@ extern "C" {
 #define XJSON_SUCCESS           1
 #define XJSON_FAILURE           0
 
+#define XMAP_INITIAL_SIZE       16
+#define XMAP_CHAIN_LENGTH       32
+#define XMAP_MISSING            -5  /* No such element */
+#define XMAP_OINV               -4  /* Invalid parameter */
+#define XMAP_FULL               -3  /* Hashmap is full */
+#define XMAP_OMEM               -2  /* Out of Memory */
+#define XMAP_STOP               -1  /* Stop iteration */
+#define XMAP_EMPTY              0   /* Map is empty */
+#define XMAP_OK                 1   /* Success */
+
+/////////////////////////////////////////////////////////////////////////
+// XJSON ARRAY
+/////////////////////////////////////////////////////////////////////////
+
+typedef enum {
+    XARRAY_STATUS_OK = (uint8_t)0,
+    xarray_status_EMPTY,
+    XARRAY_STATUS_NO_MEMORY
+} xarray_status_t;
+
+typedef struct xarray_data_ {
+    size_t nSize;
+    void* pData;
+} xarray_data_t;
+
+typedef void(*xarray_clear_cb_t)(xarray_data_t *pArrData);
+
+typedef struct xarray_ {
+    xarray_clear_cb_t clearCb;
+    xarray_status_t eStatus;
+    xarray_data_t **pData;
+    size_t nSize;
+    size_t nUsed;
+    int nFixed:1;
+    int nAlloc:1;
+} xarray_t;
+
+void* XArray_Init(xarray_t *pArr, size_t nSize, uint8_t nFixed);
+xarray_t* XArray_New(size_t nSize, uint8_t nFixed);
+size_t XArray_Realloc(xarray_t *pArr);
+
+void XArray_ClearData(xarray_t *pArr, xarray_data_t *pArrData);
+void XArray_FreeData(xarray_data_t *pArrData);
+void XArray_Clear(xarray_t *pArr);
+void XArray_Destroy(xarray_t *pArr);
+
+xarray_data_t *XArray_NewData(void *pData, size_t nSize);
+xarray_data_t* XArray_Remove(xarray_t *pArr, size_t nIndex);
+xarray_data_t* XArray_Get(xarray_t *pArr, size_t nIndex);
+
+int XArray_Add(xarray_t *pArr, xarray_data_t *pNewData);
+int XArray_AddData(xarray_t *pArr, void *pData, size_t nSize);
+void* XArray_GetData(xarray_t *pArr, size_t nIndex);
+size_t XArray_GetSize(xarray_t *pArr, size_t nIndex);
+
+size_t XArray_GetUsedSize(xarray_t *pArr);
+size_t XArray_GetArraySize(xarray_t *pArr);
+
+/////////////////////////////////////////////////////////////////////////
+// XJSON HASHMAP
+/////////////////////////////////////////////////////////////////////////
+
+typedef struct xmap_pair_ {
+    const char *pKey;
+    void *pData;
+    int nUsed:1;
+} xmap_pair_t;
+
+typedef void(*xmap_clear_cb_t)(xmap_pair_t*);
+typedef int(*xmap_it_t)(xmap_pair_t*, void*);
+
+typedef struct xmap_ {
+    xmap_clear_cb_t clearCb;
+    xmap_pair_t *pPairs;
+    size_t nTableSize;
+    size_t nUsed;
+    int nAlloc:1;
+} xmap_t;
+
+int XMap_Init(xmap_t *pMap, size_t nSize);
+xmap_t *XMap_New(size_t nSize);
+void XMap_Destroy(xmap_t *pMap);
+
+int XMap_UsedSize(xmap_t *pMap);
+int XMap_Realloc(xmap_t *pMap);
+
+uint32_t XMap_CRC32B(const uint8_t *pInput, size_t nLength);
+int XMap_GetIndex(xmap_t *pMap, const char* pKey);
+int XMap_Hash(xmap_t *pMap, const char *pStr);
+
+int XMap_Iterate(xmap_t *pMap, xmap_it_t itfunc, void *pCtx);
+int XMap_ClearIt(xmap_pair_t *pPair, void *pCtx);
+
+int XMap_Put(xmap_t *pMap, const char* pKey, void *pValue);
+void* XMap_Get(xmap_t *pMap, const char* pKey);
+int XMap_Remove(xmap_t *pMap, const char* pKey);
+
+/////////////////////////////////////////////////////////////////////////
+// XJSON PARSER/ASSEMBLER
+/////////////////////////////////////////////////////////////////////////
+
 typedef enum {
     XJSON_TOKEN_INVALID = (uint8_t)0,
     XJSON_TOKEN_COMMA,

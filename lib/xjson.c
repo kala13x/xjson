@@ -27,59 +27,8 @@
 #define XJSON_BOOL_MAX      6
 #define XJSON_NULL_MAX      5
 
-#define XMAP_INITIAL_SIZE   16
-#define XMAP_CHAIN_LENGTH   32
-#define XMAP_MISSING        -5  /* No such element */
-#define XMAP_OINV           -4  /* Invalid parameter */
-#define XMAP_FULL           -3  /* Hashmap is full */
-#define XMAP_OMEM           -2  /* Out of Memory */
-#define XMAP_STOP           -1  /* Stop iteration */
-#define XMAP_EMPTY          0   /* Map is empty */
-#define XMAP_OK             1   /* Success */
-
 #define XARRAY_SUCCESS      0
 #define XARRAY_FAILURE      -1
-
-typedef struct xmap_pair_ {
-    const char *pKey;
-    void *pData;
-    int nUsed:1;
-} xmap_pair_t;
-
-typedef void(*xmap_clear_cb_t)(xmap_pair_t*);
-typedef int(*xmap_it_t)(xmap_pair_t*, void*);
-
-typedef struct xmap_ {
-    xmap_clear_cb_t clearCb;
-    xmap_pair_t *pPairs;
-    size_t nTableSize;
-    size_t nUsed;
-    int nAlloc:1;
-} xmap_t;
-
-typedef enum {
-    XARRAY_STATUS_OK = (uint8_t)0,
-    xarray_status_EMPTY,
-    XARRAY_STATUS_NO_MEMORY
-} xarray_status_t;
-
-typedef struct xarray_data_ {
-    uint64_t nKey;
-    size_t nSize;
-    void* pData;
-} xarray_data_t;
-
-typedef void(*xarray_clear_cb_t)(xarray_data_t *pArrData);
-
-typedef struct xarray_ {
-    xarray_clear_cb_t clearCb;
-    xarray_status_t eStatus;
-    xarray_data_t **pData;
-    size_t nSize;
-    size_t nUsed;
-    int nFixed:1;
-    int nAlloc:1;
-} xarray_t;
 
 typedef struct xjson_iterator_ {
     xjson_writer_t *pWriter;
@@ -112,7 +61,7 @@ int XJSON_GetErrorStr(xjson_t *pJson, char *pOutput, size_t nSize)
 // XJSON ARRAY
 /////////////////////////////////////////////////////////////////////////
 
-static xarray_data_t *XArray_NewData(void *pData, size_t nSize, uint64_t nKey)
+xarray_data_t *XArray_NewData(void *pData, size_t nSize)
 {
     xarray_data_t *pNewData = (xarray_data_t*)malloc(sizeof(xarray_data_t));
     if (pNewData == NULL) return NULL;
@@ -135,11 +84,10 @@ static xarray_data_t *XArray_NewData(void *pData, size_t nSize, uint64_t nKey)
         pNewData->nSize = 0;
     }
 
-    pNewData->nKey = nKey;
     return pNewData;
 }
 
-static void XArray_FreeData(xarray_data_t *pArrData)
+void XArray_FreeData(xarray_data_t *pArrData)
 {
     if (pArrData != NULL)
     {
@@ -151,7 +99,7 @@ static void XArray_FreeData(xarray_data_t *pArrData)
     }
 }
 
-static void XArray_ClearData(xarray_t *pArr, xarray_data_t *pArrData)
+void XArray_ClearData(xarray_t *pArr, xarray_data_t *pArrData)
 {
     if (pArr != NULL && 
         pArrData != NULL && 
@@ -165,7 +113,7 @@ static void XArray_ClearData(xarray_t *pArr, xarray_data_t *pArrData)
     XArray_FreeData(pArrData);
 }
 
-static void* XArray_Init(xarray_t *pArr, size_t nSize, uint8_t nFixed)
+void* XArray_Init(xarray_t *pArr, size_t nSize, uint8_t nFixed)
 {
     pArr->pData = (xarray_data_t**)malloc(sizeof(xarray_data_t*) * nSize);
     if (pArr->pData == NULL) return NULL;
@@ -184,7 +132,7 @@ static void* XArray_Init(xarray_t *pArr, size_t nSize, uint8_t nFixed)
     return pArr->pData;
 }
 
-static xarray_t* XArray_New(size_t nSize, uint8_t nFixed)
+xarray_t* XArray_New(size_t nSize, uint8_t nFixed)
 {
     xarray_t *pArr = (xarray_t*)malloc(sizeof(xarray_t));
     if (pArr == NULL) return NULL;
@@ -199,7 +147,7 @@ static xarray_t* XArray_New(size_t nSize, uint8_t nFixed)
     return pArr;
 }
 
-static void XArray_Clear(xarray_t *pArr)
+void XArray_Clear(xarray_t *pArr)
 {
     if (pArr->pData != NULL)
     {
@@ -215,7 +163,7 @@ static void XArray_Clear(xarray_t *pArr)
     pArr->nUsed = 0;
 }
 
-static void XArray_Destroy(xarray_t *pArr)
+void XArray_Destroy(xarray_t *pArr)
 {
     XArray_Clear(pArr);
     if (pArr->pData != NULL)
@@ -231,7 +179,7 @@ static void XArray_Destroy(xarray_t *pArr)
         free(pArr);
 }
 
-static size_t XArray_Realloc(xarray_t *pArr)
+size_t XArray_Realloc(xarray_t *pArr)
 {
     if (pArr->nFixed) return pArr->nSize;
     size_t nSize = 0, nUsed = pArr->nUsed;
@@ -264,7 +212,7 @@ static size_t XArray_Realloc(xarray_t *pArr)
     return pArr->nSize;
 }
 
-static int XArray_CheckSpace(xarray_t *pArr)
+int XArray_CheckSpace(xarray_t *pArr)
 {
     if (pArr && pArr->pData && 
         pArr->nUsed >= pArr->nSize)
@@ -273,7 +221,7 @@ static int XArray_CheckSpace(xarray_t *pArr)
     return 1;
 }
 
-static int XArray_Add(xarray_t *pArr, xarray_data_t *pNewData)
+int XArray_Add(xarray_t *pArr, xarray_data_t *pNewData)
 {
     if (!XArray_CheckSpace(pArr))
     {
@@ -285,11 +233,11 @@ static int XArray_Add(xarray_t *pArr, xarray_data_t *pNewData)
     return pArr->nUsed;
 }
 
-static int XArray_AddData(xarray_t *pArr, void *pData, size_t nSize)
+int XArray_AddData(xarray_t *pArr, void *pData, size_t nSize)
 {
-    xarray_data_t *pNewData = XArray_NewData(pData, nSize, 0);
+    xarray_data_t *pNewData = XArray_NewData(pData, nSize);
 
-    if (pNewData == NULL) 
+    if (pNewData == NULL)
     {
         pArr->eStatus = XARRAY_STATUS_NO_MEMORY;
         return XARRAY_FAILURE;
@@ -298,11 +246,37 @@ static int XArray_AddData(xarray_t *pArr, void *pData, size_t nSize)
     return XArray_Add(pArr, pNewData);
 }
 
-static void* XArray_GetData(xarray_t *pArr, size_t nIndex)
+void* XArray_GetData(xarray_t *pArr, size_t nIndex)
 {
     if (nIndex >= pArr->nSize) return NULL;
     xarray_data_t *pArrData = pArr->pData[nIndex];
     return pArrData ? pArrData->pData : NULL;
+}
+
+size_t XArray_GetSize(xarray_t *pArr, size_t nIndex)
+{
+    if (nIndex >= pArr->nSize) return 0;
+    xarray_data_t *pArrData = pArr->pData[nIndex];
+    return pArrData ? pArrData->nSize : 0;
+}
+
+xarray_data_t* XArray_Remove(xarray_t *pArr, size_t nIndex)
+{
+    if (nIndex >= pArr->nSize) return NULL;
+    size_t i;
+
+    xarray_data_t *pData = pArr->pData[nIndex];
+    if (pData == NULL) return NULL;
+
+    for (i = nIndex; i < pArr->nUsed; i++)
+    {
+        if ((i + 1) >= pArr->nUsed) break;
+        pArr->pData[i] = pArr->pData[i+1];
+    }
+
+    pArr->pData[--pArr->nUsed] = NULL;
+    XArray_Realloc(pArr);
+    return pData;
 }
 
 size_t XArray_GetUsedSize(xarray_t *pArr)
@@ -311,11 +285,17 @@ size_t XArray_GetUsedSize(xarray_t *pArr)
     return pArr->nUsed;
 }
 
+size_t XArray_GetArraySize(xarray_t *pArr)
+{
+    if (pArr == NULL) return 0;
+    return pArr->nSize;
+}
+
 /////////////////////////////////////////////////////////////////////////
 // XJSON MAP
 /////////////////////////////////////////////////////////////////////////
 
-static int XMap_Init(xmap_t *pMap, size_t nSize)
+int XMap_Init(xmap_t *pMap, size_t nSize)
 {
     size_t nInitialSize = nSize ? nSize : XMAP_INITIAL_SIZE;
     pMap->pPairs = (xmap_pair_t*)calloc(nInitialSize, sizeof(xmap_pair_t));
@@ -328,7 +308,7 @@ static int XMap_Init(xmap_t *pMap, size_t nSize)
     return XMAP_OK;
 }
 
-static xmap_t *XMap_New(size_t nSize)
+xmap_t *XMap_New(size_t nSize)
 {
     xmap_t *pMap = (xmap_t*)malloc(sizeof(xmap_t));
     if(pMap == NULL) return NULL;
@@ -343,7 +323,7 @@ static xmap_t *XMap_New(size_t nSize)
     return pMap;
 }
 
-static void XMap_Free(xmap_t *pMap)
+void XMap_Free(xmap_t *pMap)
 {
     if (pMap != NULL)
     {
@@ -352,13 +332,13 @@ static void XMap_Free(xmap_t *pMap)
     }
 }
 
-static int XMap_UsedSize(xmap_t *pMap)
+int XMap_UsedSize(xmap_t *pMap)
 {
     if(pMap == NULL) return XMAP_OINV;
     return pMap->nUsed;
 }
 
-static int XMap_Iterate(xmap_t *pMap, xmap_it_t itfunc, void *pCtx) 
+int XMap_Iterate(xmap_t *pMap, xmap_it_t itfunc, void *pCtx) 
 {
     if (!XMap_UsedSize(pMap)) return XMAP_EMPTY;
     size_t i;
@@ -375,7 +355,7 @@ static int XMap_Iterate(xmap_t *pMap, xmap_it_t itfunc, void *pCtx)
     return XMAP_OK;
 }
 
-static int XMap_ClearIt(xmap_pair_t *pPair, void *pCtx)
+int XMap_ClearIt(xmap_pair_t *pPair, void *pCtx)
 {
     xmap_t *pMap = (xmap_t*)pCtx;
     if (pMap->clearCb != NULL)
@@ -383,13 +363,13 @@ static int XMap_ClearIt(xmap_pair_t *pPair, void *pCtx)
     return XMAP_OK;
 }
 
-static void XMap_Destroy(xmap_t *pMap)
+void XMap_Destroy(xmap_t *pMap)
 {
     XMap_Iterate(pMap, XMap_ClearIt, pMap);
     XMap_Free(pMap);
 }
 
-static uint32_t XMap_CRC32B(const uint8_t *pInput, size_t nLength)
+uint32_t XMap_CRC32B(const uint8_t *pInput, size_t nLength)
 {
     uint32_t nCRC = 0xFFFFFFFF;
     unsigned int i;
@@ -410,7 +390,7 @@ static uint32_t XMap_CRC32B(const uint8_t *pInput, size_t nLength)
     return ~nCRC;
 }
 
-static int XMap_Hash(xmap_t *pMap, const char *pStr)
+int XMap_Hash(xmap_t *pMap, const char *pStr)
 {
     uint32_t pKey = XMap_CRC32B((unsigned char*)(pStr), strlen(pStr));
 
@@ -429,7 +409,7 @@ static int XMap_Hash(xmap_t *pMap, const char *pStr)
     return pKey % pMap->nTableSize;
 }
 
-static int XMap_GetHash(xmap_t *pMap, const char* pKey)
+int XMap_GetIndex(xmap_t *pMap, const char* pKey)
 {
     if (pMap->nUsed >= pMap->nTableSize) return XMAP_FULL;
     int i, nIndex = XMap_Hash(pMap, pKey);
@@ -444,9 +424,7 @@ static int XMap_GetHash(xmap_t *pMap, const char* pKey)
     return XMAP_FULL;
 }
 
-int XMap_Put(xmap_t *pMap, const char* pKey, void *pValue);
-
-static int XMap_Realloc(xmap_t *pMap)
+int XMap_Realloc(xmap_t *pMap)
 {
     size_t nNewSize = pMap->nTableSize * 2;
     xmap_pair_t *pPairs = (xmap_pair_t*)calloc(nNewSize, sizeof(xmap_pair_t));
@@ -484,24 +462,24 @@ static int XMap_Realloc(xmap_t *pMap)
 int XMap_Put(xmap_t *pMap, const char* pKey, void *pValue)
 {
     if (pMap == NULL || pKey == NULL) return XMAP_OINV;
-    int nHash = XMap_GetHash(pMap, pKey);
+    int nIndex = XMap_GetIndex(pMap, pKey);
 
-    while (nHash == XMAP_FULL)
+    while (nIndex == XMAP_FULL)
     {
         int nStatus = XMap_Realloc(pMap);
         if (nStatus < 0) return nStatus;
-        nHash = XMap_GetHash(pMap, pKey);
+        nIndex = XMap_GetIndex(pMap, pKey);
     }
 
     /* Set the data */
-    pMap->pPairs[nHash].pData = pValue;
-    pMap->pPairs[nHash].pKey = pKey;
-    pMap->pPairs[nHash].nUsed = 1;
+    pMap->pPairs[nIndex].pData = pValue;
+    pMap->pPairs[nIndex].pKey = pKey;
+    pMap->pPairs[nIndex].nUsed = 1;
     pMap->nUsed++; 
     return XMAP_OK;
 }
 
-static void* XMap_Get(xmap_t *pMap, const char* pKey)
+void* XMap_Get(xmap_t *pMap, const char* pKey)
 {
     if (pMap == NULL || pKey == NULL) return NULL;
     int i, nIndex = XMap_Hash(pMap, pKey);
@@ -518,6 +496,37 @@ static void* XMap_Get(xmap_t *pMap, const char* pKey)
     }
 
     return NULL;
+}
+
+int XMap_Remove(xmap_t *pMap, const char* pKey)
+{
+    if (pMap == NULL || pKey == NULL) return XMAP_OINV;
+    int i, nIndex = XMap_Hash(pMap, pKey);
+
+    for (i = 0; i < XMAP_CHAIN_LENGTH; i++)
+    {
+        if (pMap->pPairs[nIndex].nUsed)
+        {
+            if (!strcmp(pMap->pPairs[nIndex].pKey, pKey))
+            {
+                xmap_pair_t *pPair = &pMap->pPairs[nIndex];
+                if (pMap->nUsed) pMap->nUsed--;
+
+                if (pMap->clearCb != NULL) 
+                    pMap->clearCb(pPair);
+
+                pPair->nUsed = 0;
+                pPair->pData = NULL;
+                pPair->pKey = NULL;
+
+                return XMAP_OK;
+            }
+        }
+
+        nIndex = (nIndex + 1) % pMap->nTableSize;
+    }
+
+    return XMAP_MISSING;
 }
 
 /////////////////////////////////////////////////////////////////////////
