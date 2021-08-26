@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 
         XJSON_Destroy(&json);
         free(pBuffer);
-        return 0;
+        return 1;
     }
 
     if (args.nMinify)
