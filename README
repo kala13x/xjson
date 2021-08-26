@@ -1,13 +1,13 @@
  xJson C/C++ library 1.x (c) Sun Dro <f4tb0y@protonmail.com>
 
-This directory contains the sources of the xJson Library. See
+This directory contains the sources of the xJson library. See
 the file "lib/xjson.h" for what release version do you have.
 
 The xJson library is the C/C++ library for all Linux/Unix systems.
 It provides implementations of recursive parser, lexical analyzer,
-dynamic allocated arrays and hash-maps to parse and assemble json
-files and strings. There is also an example file that implements 
-a json file liner and minifier using the xJson library.
+dynamic allocated arrays, and hash-maps to parse and assemble JSON
+files and strings. There is also a C example file that implements
+the JSON file linter and minifier using the xJson library.
 
 The xJson library is free software. you can redistribute it and / or
 modify under the terms of The MIT License (See LICENSE file for more
